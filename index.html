@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Meus Projetos no GitHub Pages</title>
+  <title>Arquivos do Projeto</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -25,41 +25,33 @@
   </style>
 </head>
 <body>
-  <h1>Projetos Publicados</h1>
-  <p>Listagem automática de subpastas com <code>index.html</code></p>
-  <ul id="listaProjetos"></ul>
+  <h1>Arquivos no repositório</h1>
+  <ul id="listaArquivos"></ul>
 
   <script>
-    // Configure o nome do seu usuário e repositório aqui:
-    const usuario = 'rodrigoeggea'; // substitua pelo seu usuário do GitHub
-    const repositorio = 'js'; // substitua pelo nome do repositório
+    const usuario = 'SEU_USUARIO'; // 👈 substitua pelo seu usuário GitHub
+    const repositorio = 'SEU_REPOSITORIO'; // 👈 substitua pelo nome do repositório
+    const branch = 'main'; // ou 'master', conforme seu repo
 
-    const apiURL = `https://api.github.com/repos/${usuario}/${repositorio}/contents/`;
-    const lista = document.getElementById("listaProjetos");
+    const lista = document.getElementById('listaArquivos');
 
-    fetch(apiURL)
+    fetch(`https://api.github.com/repos/${usuario}/${repositorio}/contents/`)
       .then(res => res.json())
-      .then(data => {
-        data.forEach(item => {
-          if (item.type === "dir") {
-            fetch(item.url)
-              .then(res => res.json())
-              .then(conteudo => {
-                const temIndex = conteudo.some(arq => arq.name === "index.html");
-                if (temIndex) {
-                  const li = document.createElement("li");
-                  const link = document.createElement("a");
-                  link.href = `./${item.name}/`;
-                  link.textContent = item.name;
-                  li.appendChild(link);
-                  lista.appendChild(li);
-                }
-              });
+      .then(arquivos => {
+        arquivos.forEach(arquivo => {
+          if (arquivo.type === 'file') {
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `https://${usuario}.github.io/${repositorio}/${arquivo.name}`;
+            link.textContent = arquivo.name;
+            link.target = '_blank';
+            li.appendChild(link);
+            lista.appendChild(li);
           }
         });
       })
       .catch(err => {
-        lista.innerHTML = '<li>Erro ao carregar a lista de projetos.</li>';
+        lista.innerHTML = '<li>Erro ao carregar arquivos.</li>';
         console.error(err);
       });
   </script>
