@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Meus Projetos no GitHub Pages</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 8px 0;
+    }
+    a {
+      text-decoration: none;
+      color: #0066cc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Projetos Publicados</h1>
+  <p>Listagem automática de subpastas com <code>index.html</code></p>
+  <ul id="listaProjetos"></ul>
+
+  <script>
+    // Configure o nome do seu usuário e repositório aqui:
+    const usuario = 'rodrigoeggea'; // substitua pelo seu usuário do GitHub
+    const repositorio = 'js'; // substitua pelo nome do repositório
+
+    const apiURL = `https://api.github.com/repos/${usuario}/${repositorio}/contents/`;
+    const lista = document.getElementById("listaProjetos");
+
+    fetch(apiURL)
+      .then(res => res.json())
+      .then(data => {
+        data.forEach(item => {
+          if (item.type === "dir") {
+            fetch(item.url)
+              .then(res => res.json())
+              .then(conteudo => {
+                const temIndex = conteudo.some(arq => arq.name === "index.html");
+                if (temIndex) {
+                  const li = document.createElement("li");
+                  const link = document.createElement("a");
+                  link.href = `./${item.name}/`;
+                  link.textContent = item.name;
+                  li.appendChild(link);
+                  lista.appendChild(li);
+                }
+              });
+          }
+        });
+      })
+      .catch(err => {
+        lista.innerHTML = '<li>Erro ao carregar a lista de projetos.</li>';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
