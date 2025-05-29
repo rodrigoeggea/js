@@ -2,36 +2,56 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Arquivos do Projeto</title>
+  <title>Projetos no Github</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f2f4f8;
+      color: #333;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     h1 {
-      color: #333;
+      margin-bottom: 20px;
+      color: #1a73e8;
     }
     ul {
       list-style: none;
       padding: 0;
+      width: 100%;
+      max-width: 600px;
     }
     li {
-      margin: 8px 0;
+      background: white;
+      border-radius: 8px;
+      margin: 10px 0;
+      padding: 12px 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    li:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     a {
       text-decoration: none;
-      color: #0066cc;
+      color: #1a73e8;
+      font-weight: 500;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <h1>Arquivos no repositório</h1>
+  <h1>Projetos no Github</h1>
   <ul id="listaArquivos"></ul>
 
   <script>
-    const usuario = 'rodrigoeggea'; // 👈 substitua pelo seu usuário GitHub
-    const repositorio = 'js'; // 👈 substitua pelo nome do repositório
-    const branch = 'main'; // ou 'master', conforme seu repo
+    const usuario = 'rodrigoeggea';
+    const repositorio = 'js';
+    const branch = 'main';
 
     const lista = document.getElementById('listaArquivos');
 
@@ -39,7 +59,7 @@
       .then(res => res.json())
       .then(arquivos => {
         arquivos.forEach(arquivo => {
-          if (arquivo.type === 'file') {
+          if (arquivo.type === 'file' && arquivo.name !== 'index.html') {
             const li = document.createElement('li');
             const link = document.createElement('a');
             link.href = `https://${usuario}.github.io/${repositorio}/${arquivo.name}`;
