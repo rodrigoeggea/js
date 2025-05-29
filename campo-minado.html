@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Campo Minado</title>
+  <style>
+    body {
+      font-family: Arial;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 20px;
+    }
+    #tabuleiro {
+      display: grid;
+      grid-template-columns: repeat(10, 30px);
+      grid-template-rows: repeat(10, 30px);
+      gap: 2px;
+    }
+    .celula {
+      width: 30px;
+      height: 30px;
+      background: #ccc;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+    .revelada {
+      background: #eee;
+      cursor: default;
+    }
+    .bomba {
+      background: red;
+      color: white;
+    }
+    .bandeira {
+      background: #ccc;
+      color: blue;
+    }
+  </style>
+</head>
+<body>
+  <h1>Campo Minado</h1>
+  <div id="tabuleiro"></div>
+  <script>
+    const linhas = 10;
+    const colunas = 10;
+    const minas = 10;
+    let primeiraJogada = true;
+    let jogoEncerrado = false;
+    const tabuleiro = [];
+
+    const divTabuleiro = document.getElementById("tabuleiro");
+
+    function criarTabuleiro() {
+      for (let x = 0; x < linhas; x++) {
+        tabuleiro[x] = [];
+        for (let y = 0; y < colunas; y++) {
+          const celula = document.createElement("div");
+          celula.className = "celula";
+          celula.dataset.x = x;
+          celula.dataset.y = y;
+          celula.addEventListener("click", clicarCelula);
+          celula.addEventListener("contextmenu", marcarBandeira);
+          divTabuleiro.appendChild(celula);
+          tabuleiro[x][y] = { mina: false, revelada: false, vizinhos: 0, bandeira: false, el: celula };
+        }
+      }
+    }
+
+    function gerarMinas(excetoX, excetoY) {
+      let colocadas = 0;
+      while (colocadas < minas) {
+        const x = Math.floor(Math.random() * linhas);
+        const y = Math.floor(Math.random() * colunas);
+        if ((x === excetoX && y === excetoY) || tabuleiro[x][y].mina) continue;
+        tabuleiro[x][y].mina = true;
+        colocadas++;
+      }
+      calcularVizinhos();
+    }
+
+    function calcularVizinhos() {
+      for (let x = 0; x < linhas; x++) {
+        for (let y = 0; y < colunas; y++) {
+          if (tabuleiro[x][y].mina) continue;
+          let total = 0;
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && nx < linhas && ny >= 0 && ny < colunas && tabuleiro[nx][ny].mina)
+                total++;
+            }
+          }
+          tabuleiro[x][y].vizinhos = total;
+        }
+      }
+    }
+
+    function clicarCelula(e) {
+      if (jogoEncerrado) return;
+      const x = parseInt(e.target.dataset.x);
+      const y = parseInt(e.target.dataset.y);
+      const cel = tabuleiro[x][y];
+      if (cel.revelada || cel.bandeira) return;
+      if (primeiraJogada) {
+        gerarMinas(x, y);
+        primeiraJogada = false;
+      }
+      revelar(x, y);
+    }
+
+    function marcarBandeira(e) {
+      if (jogoEncerrado) return;
+      e.preventDefault();
+      const x = parseInt(e.target.dataset.x);
+      const y = parseInt(e.target.dataset.y);
+      const cel = tabuleiro[x][y];
+      if (cel.revelada) return;
+      cel.bandeira = !cel.bandeira;
+      cel.el.textContent = cel.bandeira ? '🚩' : '';
+      cel.el.classList.toggle("bandeira", cel.bandeira);
+    }
+
+    function revelar(x, y) {
+      const cel = tabuleiro[x][y];
+      if (cel.revelada || cel.bandeira) return;
+      cel.revelada = true;
+      cel.el.classList.add("revelada");
+      cel.el.textContent = cel.mina ? "💣" : (cel.vizinhos > 0 ? cel.vizinhos : "");
+
+      if (cel.mina) {
+        cel.el.classList.add("bomba");
+        alert("💥 Game Over!");
+        jogoEncerrado = true;
+        revelarTudo();
+        return;
+      }
+
+      if (cel.vizinhos === 0) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < linhas && ny >= 0 && ny < colunas) {
+              revelar(nx, ny);
+            }
+          }
+        }
+      }
+
+      if (!jogoEncerrado) verificarVitoria();
+    }
+
+    function verificarVitoria() {
+      let totalReveladas = 0;
+      for (let x = 0; x < linhas; x++) {
+        for (let y = 0; y < colunas; y++) {
+          if (tabuleiro[x][y].revelada) totalReveladas++;
+        }
+      }
+      if (totalReveladas === (linhas * colunas - minas)) {
+        jogoEncerrado = true;
+        alert("🎉 Parabéns! Você venceu o jogo!");
+        revelarTudo();
+      }
+    }
+
+    function revelarTudo() {
+      for (let x = 0; x < linhas; x++) {
+        for (let y = 0; y < colunas; y++) {
+          if (!tabuleiro[x][y].revelada) {
+            const cel = tabuleiro[x][y];
+            cel.revelada = true;
+            cel.el.classList.add("revelada");
+            cel.el.textContent = cel.mina ? "💣" : (cel.vizinhos > 0 ? cel.vizinhos : "");
+            if (cel.mina) cel.el.classList.add("bomba");
+          }
+        }
+      }
+    }
+
+    criarTabuleiro();
+  </script>
+</body>
+</html>
