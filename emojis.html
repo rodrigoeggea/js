@@ -5,19 +5,28 @@
     <title>Busca de Emojis Unicode (via GitHub)</title>
     <style>
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         margin: 20px;
         background: #f4f4f4;
       }
       h1 {
         text-align: center;
       }
-      input {
-        width: 100%;
+      .controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+        gap: 10px;
+      }
+      select {
+        padding: 8px;
+        font-size: 14px;
+      }
+      input[type="text"] {
+        flex: 1;
         padding: 12px;
         font-size: 16px;
-        margin-bottom: 20px;
         box-sizing: border-box;
       }
       .emoji-grid {
@@ -54,22 +63,25 @@
   </head>
   <body>
     <h1>🔍 Busca de Emojis Unicode (via GitHub)</h1>
-    <input
-      type="text"
-      id="search"
-      placeholder="Digite parte do nome do emoji..."
-    />
+    <div class="controls">
+      <input type="text" id="search" placeholder="Digite parte do nome do emoji..." />
+      <select id="copyMode">
+        <option value="unicode">Copiar Unicode</option>
+        <option value="imagem">Copiar Imagem PNG</option>
+      </select>
+    </div>
     <div class="emoji-grid" id="emojiGrid"></div>
 
     <script>
       const emojiGrid = document.getElementById("emojiGrid");
       const searchInput = document.getElementById("search");
+      const copyMode = document.getElementById("copyMode");
 
       function emojiToCodePoint(emoji) {
         const codePoints = [];
         for (let i = 0; i < emoji.length; i++) {
           let cp = emoji.codePointAt(i);
-          if (cp > 0xffff) i++; // skip surrogate pair
+          if (cp > 0xffff) i++;
           if (cp !== 0xfe0f) {
             codePoints.push(cp.toString(16).padStart(4, "0"));
           }
@@ -77,23 +89,46 @@
         return "emoji_u" + codePoints.join("_");
       }
 
-      function copyEmoji(char) {
-        navigator.clipboard
-          .writeText(char)
-          .then(() => {
-            alert("Emoji copiado para a área de transferência: " + char);
-          })
-          .catch((err) => {
-            console.error("Erro ao copiar emoji: ", err);
+      async function copyEmojiImage(imgUrl) {
+        try {
+          if (!('ClipboardItem' in window && 'clipboard' in navigator)) {
+            throw new Error("Seu navegador não suporta cópia de imagens para a área de transferência.");
+          }
+
+          const response = await fetch(imgUrl);
+          if (!response.ok) throw new Error("Falha ao buscar a imagem: " + response.status);
+
+          const blob = await response.blob();
+          const item = new ClipboardItem({ [blob.type]: blob });
+          await navigator.clipboard.write([item]);
+
+          alert("Imagem copiada para a área de transferência!");
+        } catch (error) {
+          console.error("Erro ao copiar imagem:", error);
+          alert("Erro ao copiar imagem:\n" + error.message);
+        }
+      }
+
+      async function handleCopy(char, imgUrl) {
+        if (copyMode.value === "unicode") {
+          try {
+            await navigator.clipboard.writeText(char);
+            alert("Emoji copiado: " + char);
+          } catch (err) {
+            console.error("Erro ao copiar emoji:", err);
             alert("Erro ao copiar emoji.");
-          });
+          }
+        } else {
+          copyEmojiImage(imgUrl);
+        }
       }
 
       function renderEmojis(emojis, filter = "") {
         emojiGrid.innerHTML = "";
         const filtered = Object.entries(emojis).filter(
           ([char, data]) =>
-            data.name && data.name.toLowerCase().includes(filter.toLowerCase())
+            data.name &&
+            data.name.toLowerCase().includes(filter.toLowerCase())
         );
         for (const [char, data] of filtered) {
           const code = emojiToCodePoint(char);
@@ -101,7 +136,7 @@
 
           const card = document.createElement("div");
           card.className = "emoji-card";
-          card.onclick = () => copyEmoji(char);
+          card.onclick = () => handleCopy(char, imgUrl);
 
           const img = document.createElement("img");
           img.className = "emoji-img";
