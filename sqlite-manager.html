@@ -6,168 +6,61 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
   <style>
     * { box-sizing: border-box; }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f5f7fa;
-      color: #333;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-      color: #2c3e50;
-    }
-
-    .upload-container {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
+    body { font-family: 'Segoe UI', sans-serif; background-color: #f5f7fa; color: #333; margin: 0; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 30px; color: #2c3e50; }
+    .upload-container { text-align: center; margin-bottom: 30px; }
     input[type="file"], #save-btn {
-      display: inline-block;
-      margin: 10px;
-      padding: 10px 15px;
-      font-size: 16px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      background-color: #fff;
-      cursor: pointer;
+      display: inline-block; margin: 10px; padding: 10px 15px; font-size: 16px;
+      border-radius: 6px; border: 1px solid #ccc; background-color: #fff; cursor: pointer;
       transition: background-color 0.2s ease;
     }
-
-    #save-btn {
-      background-color: #2ecc71;
-      color: white;
-      border: none;
-    }
-
-    #save-btn:hover {
-      background-color: #27ae60;
-    }
-
-    .tabs {
-      display: flex;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-      border-bottom: 2px solid #ccc;
-    }
-
+    #save-btn { background-color: #2ecc71; color: white; border: none; }
+    #save-btn:hover { background-color: #27ae60; }
+    .tabs { display: flex; flex-wrap: wrap; margin-bottom: 15px; border-bottom: 2px solid #ccc; }
     .tab-button {
-      padding: 10px 20px;
-      border: none;
-      background: #ecf0f1;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background-color 0.2s;
-      border-top-left-radius: 5px;
-      border-top-right-radius: 5px;
-      margin-right: 5px;
+      padding: 10px 20px; border: none; background: #ecf0f1; cursor: pointer;
+      font-weight: 500; transition: background-color 0.2s;
+      border-top-left-radius: 5px; border-top-right-radius: 5px; margin-right: 5px;
     }
-
     .tab-button.active {
-      background: #fff;
-      border-bottom: 2px solid #fff;
-      color: #2c3e50;
-      font-weight: bold;
+      background: #fff; border-bottom: 2px solid #fff; color: #2c3e50; font-weight: bold;
     }
-
     .tab-content {
-      display: none;
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      padding: 15px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      display: none; background-color: white; border: 1px solid #ddd; border-radius: 5px;
+      padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-
-    .tab-content.active {
-      display: block;
+    .tab-content.active { display: block; }
+    .insert-container { margin-top: 20px; }
+    .insert-container input {
+      padding: 8px; margin: 4px 5px 8px 0; border: 1px solid #ccc;
+      border-radius: 4px; font-size: 14px;
     }
-
-    .filter h4 {
-      margin-top: 0;
-      font-size: 16px;
-      color: #34495e;
+    .insert-container button {
+      background-color: #3498db; color: white; border: none;
+      padding: 8px 14px; font-size: 14px; border-radius: 4px; cursor: pointer; margin-top: 8px;
     }
-
-    .filter input {
-      padding: 8px;
-      margin: 4px 5px 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-
-    .insert-container {
-      margin-top: 25px;
-    }
-
-    .insert-container h4 {
-      margin-bottom: 10px;
-      font-size: 16px;
-      color: #34495e;
-    }
-
-    .insert-container form input {
-      padding: 8px;
-      margin: 4px 5px 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-
-    .insert-container form button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      font-size: 14px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-
-    .insert-container form button:hover {
-      background-color: #2980b9;
-    }
-
     table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-      table-layout: fixed;
+      width: 100%; border-collapse: collapse; margin-top: 15px; table-layout: fixed;
     }
-
     th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: left;
-      font-size: 14px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      padding: 10px; border: 1px solid #ddd; font-size: 14px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-
     th {
-      background-color: #f0f0f0;
-      font-weight: 600;
-      position: relative;
+      position: relative; background-color: #f0f0f0;
+      font-weight: 600; user-select: none;
+      resize: horizontal; overflow: auto;
+      min-width: 60px;
     }
-
+    .filter-input {
+      width: 100%; padding: 4px; font-size: 13px;
+      border: 1px solid #ccc; border-radius: 3px;
+    }
     .delete-btn {
-      color: #e74c3c;
-      font-weight: bold;
-      border: none;
-      background: none;
-      cursor: pointer;
+      color: #e74c3c; font-weight: bold; border: none;
+      background: none; cursor: pointer;
     }
-
-    .delete-btn:hover {
-      text-decoration: underline;
-    }
+    .delete-btn:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -178,199 +71,182 @@
   </div>
   <div id="tabs" class="tabs"></div>
   <div id="tab-contents"></div>
-
   <script>
-    let SQL, db, allColumns = {}, allData = {}, originalFileName = "database.sqlite";
-
-    initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` })
-      .then(SQLLib => {
-        SQL = SQLLib;
-        document.getElementById('file-input').addEventListener('change', handleFile);
-        document.getElementById('save-btn').addEventListener('click', saveDatabase);
+let SQL, db, allColumns = {}, allData = {}, originalFileName = "arquivo salvo";
+initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` })
+  .then(SQLLib => {
+    SQL = SQLLib;
+    document.getElementById('file-input').addEventListener('change', handleFile);
+    document.getElementById('save-btn').addEventListener('click', saveDatabase);
+  });
+async function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  originalFileName = file.name;
+  const buffer = await file.arrayBuffer();
+  db = new SQL.Database(new Uint8Array(buffer));
+  db.run("PRAGMA foreign_keys = ON");
+  document.getElementById("save-btn").style.display = "inline-block";
+  renderTables();
+}
+function renderTables() {
+  const tabsContainer = document.getElementById("tabs");
+  const contentsContainer = document.getElementById("tab-contents");
+  tabsContainer.innerHTML = contentsContainer.innerHTML = "";
+  const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+  if (!tables.length) return;
+  const tableNames = tables[0].values.map(row => row[0]);
+  tableNames.forEach((tableName, index) => {
+    const result = db.exec(`SELECT * FROM ${tableName}`);
+    const columns = getTableColumns(tableName);
+    const values = result.length ? result[0].values : [];
+    const primaryKeyCol = columns.find(c => c.pk);
+    allColumns[tableName] = columns;
+    allData[tableName] = values;
+    const tabBtn = document.createElement("button");
+    tabBtn.className = "tab-button";
+    tabBtn.textContent = tableName;
+    tabBtn.onclick = () => setActiveTab(index);
+    tabsContainer.appendChild(tabBtn);
+    const tabContent = document.createElement("div");
+    tabContent.className = "tab-content";
+    if (index === 0) tabBtn.classList.add("active");
+    if (index === 0) tabContent.classList.add("active");
+    const tableHTML = createTableHTML(tableName, columns, values, primaryKeyCol);
+    tabContent.innerHTML = `<div id="table-${tableName}">${tableHTML}</div>`;
+    const insertContainer = document.createElement("div");
+    insertContainer.className = "insert-container";
+    insertContainer.innerHTML = `<h4>Inserir novo registro</h4>`;
+    const form = document.createElement("form");
+    const insertableColumns = columns.filter(col => !(col.pk && col.type.toUpperCase() === 'INTEGER'));
+    insertableColumns.forEach(col => {
+      form.innerHTML += `<input name="${col.name}" placeholder="${col.name}" />`;
+    });
+    form.innerHTML += `<br><button type="submit">Inserir</button>`;
+    form.onsubmit = e => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const keys = [], vals = [];
+      insertableColumns.forEach(col => {
+        const val = formData.get(col.name).trim();
+        keys.push(col.name);
+        vals.push(val === '' ? 'NULL' : `'${val.replace(/'/g, "''")}'`);
       });
-
-    async function handleFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      originalFileName = file.name;
-      const buffer = await file.arrayBuffer();
-      db = new SQL.Database(new Uint8Array(buffer));
-      db.run("PRAGMA foreign_keys = ON");
-      document.getElementById("save-btn").style.display = "inline-block";
-      renderTables();
-    }
-
-    function saveDatabase() {
       try {
-        const data = db.export();
-        const blob = new Blob([data], { type: 'application/x-sqlite3' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = originalFileName;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        const reader = new FileReader();
-        reader.onload = function () {
-          db = new SQL.Database(new Uint8Array(reader.result));
-          db.run("PRAGMA foreign_keys = ON");
-          renderTables();
-        };
-        reader.readAsArrayBuffer(blob);
-
-        const file = new File([blob], "arquivo salvo", { type: "application/x-sqlite3" });
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        document.querySelector("#file-input").files = dataTransfer.files;
-
-      } catch (e) {
-        alert('Erro ao salvar: ' + e.message);
-      }
-    }
-
-    function renderTables() {
-      const tablesResult = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
-      if (tablesResult.length === 0) return;
-
-      const tableNames = tablesResult[0].values.map(row => row[0]);
-      document.getElementById('tabs').innerHTML = '';
-      document.getElementById('tab-contents').innerHTML = '';
-
-      tableNames.forEach((tableName, index) => {
-        const result = db.exec(`SELECT * FROM ${tableName}`);
-        const columns = getTableColumns(tableName);
-        const values = result.length ? result[0].values : [];
-        const primaryKeyCol = columns.find(c => c.pk);
-        allColumns[tableName] = columns;
-        allData[tableName] = values;
-
-        const button = document.createElement('button');
-        button.textContent = tableName;
-        button.className = 'tab-button';
-        button.addEventListener('click', () => setActiveTab(index));
-        document.getElementById('tabs').appendChild(button);
-
-        const tabContent = document.createElement('div');
-        tabContent.className = 'tab-content';
-
-        const filterDiv = document.createElement('div');
-        filterDiv.className = 'filter';
-        filterDiv.innerHTML = `<h4>Filtrar registros</h4>`;
-        columns.forEach(col => {
-          filterDiv.innerHTML += `<input data-col="${col.name}" placeholder="${col.name}" oninput="applyFilter('${tableName}')"/>`;
-        });
-        tabContent.appendChild(filterDiv);
-
-        const tableContainer = document.createElement('div');
-        tableContainer.id = `table-${tableName}`;
-        tableContainer.innerHTML = createTableHTML(tableName, columns, values, primaryKeyCol);
-        tabContent.appendChild(tableContainer);
-
-        const insertContainer = document.createElement('div');
-        insertContainer.className = 'insert-container';
-        insertContainer.innerHTML = `<h4>Inserir novo registro</h4>`;
-        const form = document.createElement('form');
-        const insertableColumns = columns.filter(col => !(col.pk && col.type.toUpperCase() === 'INTEGER'));
-        insertableColumns.forEach(col => {
-          form.innerHTML += `<input name="${col.name}" placeholder="${col.name}" />`;
-        });
-        form.innerHTML += `<br><button type="submit">Inserir</button>`;
-        form.addEventListener('submit', event => {
-          event.preventDefault();
-          const formData = new FormData(form);
-          const keys = [], vals = [];
-          let errorMsg = '';
-          insertableColumns.forEach(col => {
-            const val = formData.get(col.name).trim();
-            const required = col.notnull && col.dflt_value === null;
-            if (required && val === '') errorMsg += `Campo "${col.name}" obrigatório.\n`;
-            if (val !== '') {
-              if (col.type.toUpperCase().includes('INT') && isNaN(parseInt(val))) errorMsg += `Campo "${col.name}" deve ser número inteiro.\n`;
-              if (col.type.toUpperCase().includes('REAL') && isNaN(parseFloat(val))) errorMsg += `Campo "${col.name}" deve ser número decimal.\n`;
-            }
-            keys.push(col.name);
-            vals.push(val === '' ? 'NULL' : `'${val.replace(/'/g, "''")}'`);
-          });
-          if (errorMsg) return alert(errorMsg);
-          if (!keys.length) return alert("Nenhum dado válido.");
-          try {
-            db.run(`INSERT INTO ${tableName} (${keys.join(',')}) VALUES (${vals.join(',')})`);
-            renderTables();
-            setActiveTab(index);
-          } catch (e) { alert('Erro ao inserir: ' + e.message); }
-        });
-        insertContainer.appendChild(form);
-        tabContent.appendChild(insertContainer);
-
-        document.getElementById('tab-contents').appendChild(tabContent);
-      });
-
-      setActiveTab(0);
-    }
-
-    function getTableColumns(tableName) {
-      const info = db.exec(`PRAGMA table_info(${tableName})`);
-      return info.length
-        ? info[0].values.map(row => ({
-            cid: row[0], name: row[1], type: row[2],
-            notnull: row[3], dflt_value: row[4], pk: row[5]
-          }))
-        : [];
-    }
-
-    function createTableHTML(tableName, columns, values, primaryKeyCol) {
-      let html = '<table><thead><tr>';
-      columns.forEach(col => html += `<th>${col.name}</th>`);
-      html += `<th>Ações</th></tr></thead><tbody>`;
-      values.forEach(row => {
-        html += '<tr>';
-        row.forEach(val => html += `<td>${val !== null ? val : ''}</td>`);
-        const pkIndex = primaryKeyCol ? columns.findIndex(c => c.name === primaryKeyCol.name) : -1;
-        const pkValue = pkIndex >= 0 ? row[pkIndex] : null;
-        html += pkValue !== null
-          ? `<td><button class="delete-btn" onclick="deleteRow('${tableName}', '${primaryKeyCol.name}', '${pkValue}')">Excluir</button></td>`
-          : `<td></td>`;
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-      return html;
-    }
-
-    function deleteRow(tableName, pkName, pkValue) {
-      if (!confirm(`Excluir ${pkName} = ${pkValue}?`)) return;
-      try {
-        const escaped = typeof pkValue === 'string' ? `'${pkValue.replace(/'/g, "''")}'` : pkValue;
-        db.run(`DELETE FROM ${tableName} WHERE ${pkName} = ${escaped}`);
+        db.run(`INSERT INTO ${tableName} (${keys.join(',')}) VALUES (${vals.join(',')})`);
         renderTables();
+        setActiveTab(index);
       } catch (e) {
         if (e.message.includes("FOREIGN KEY constraint failed")) {
-          alert("Este registro está sendo usado em outra tabela.");
+          alert("Registro está sendo usado em outra tabela.");
         } else {
-          alert("Erro ao excluir: " + e.message);
+          alert("Erro: " + e.message);
         }
       }
+    };
+    insertContainer.appendChild(form);
+    tabContent.appendChild(insertContainer);
+    contentsContainer.appendChild(tabContent);
+  });
+}
+function createTableHTML(tableName, columns, values, pk) {
+  const filters = {};
+  const focusStates = {};
+  document.querySelectorAll(`#table-${tableName} .filter-input`).forEach(input => {
+    filters[input.dataset.col] = input.value.toLowerCase();
+    focusStates[input.dataset.col] = {
+      start: input.selectionStart,
+      end: input.selectionEnd,
+      focused: document.activeElement === input
+    };
+  });
+  let html = '<table><thead><tr>';
+  columns.forEach(col => html += `<th>${col.name}</th>`);
+  html += `<th>Ações</th></tr><tr>`;
+  columns.forEach(col => {
+    const val = filters[col.name] || "";
+    html += `<td><input class="filter-input" data-col="${col.name}" value="${val}" oninput="applyFilter('${tableName}')"></td>`;
+  });
+  html += '<td></td></tr></thead><tbody>';
+  const filtered = values.filter(row => {
+    return columns.every((col, i) => {
+      const cell = row[i];
+      const filter = filters[col.name] || "";
+      return filter === "" || (cell !== null && cell.toString().toLowerCase().includes(filter));
+    });
+  });
+  filtered.forEach(row => {
+    html += '<tr>';
+    row.forEach(val => html += `<td>${val !== null ? val : ''}</td>`);
+    const pkVal = pk ? row[columns.findIndex(c => c.name === pk.name)] : null;
+    html += pkVal !== null ? `<td><button class="delete-btn" onclick="deleteRow('${tableName}', '${pk.name}', '${pkVal}')">Excluir</button></td>` : '<td></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  setTimeout(() => {
+    document.querySelectorAll(`#table-${tableName} .filter-input`).forEach(input => {
+      const col = input.dataset.col;
+      if (focusStates[col]?.focused) {
+        input.focus();
+        input.setSelectionRange(focusStates[col].start, focusStates[col].end);
+      }
+    });
+  }, 0);
+  return html;
+}
+function applyFilter(tableName) {
+  const tableContainer = document.getElementById(`table-${tableName}`);
+  const columns = allColumns[tableName];
+  const values = allData[tableName];
+  const pk = columns.find(c => c.pk);
+  tableContainer.innerHTML = createTableHTML(tableName, columns, values, pk);
+}
+function deleteRow(table, pkName, pkVal) {
+  if (!confirm("Confirma exclusão?")) return;
+  try {
+    const val = typeof pkVal === 'string' ? `'${pkVal.replace(/'/g, "''")}'` : pkVal;
+    db.run(`DELETE FROM ${table} WHERE ${pkName} = ${val}`);
+    renderTables();
+  } catch (e) {
+    if (e.message.includes("FOREIGN KEY constraint failed")) {
+      alert("Registro está sendo usado em outra tabela.");
+    } else {
+      alert("Erro: " + e.message);
     }
-
-    function applyFilter(tableName) {
-      const filters = Array.from(document.querySelectorAll(`.tab-content.active input[data-col]`))
-        .map(input => [input.dataset.col, input.value.trim().toLowerCase()]);
-      const cols = allColumns[tableName], rows = allData[tableName], pk = cols.find(c => c.pk);
-      const filtered = rows.filter(row =>
-        filters.every(([col, val]) => {
-          const i = cols.findIndex(c => c.name === col);
-          const cell = row[i];
-          return val === "" || (cell !== null && cell.toString().toLowerCase().includes(val));
-        }));
-      document.getElementById(`table-${tableName}`).innerHTML = createTableHTML(tableName, cols, filtered, pk);
-    }
-
-    function setActiveTab(index) {
-      const buttons = document.querySelectorAll('.tab-button');
-      const contents = document.querySelectorAll('.tab-content');
-      buttons.forEach((btn, i) => btn.classList.toggle('active', i === index));
-      contents.forEach((ctn, i) => ctn.classList.toggle('active', i === index));
-    }
-  </script>
+  }
+}
+function getTableColumns(table) {
+  const info = db.exec(`PRAGMA table_info(${table})`);
+  return info[0].values.map(row => ({ cid: row[0], name: row[1], type: row[2], notnull: row[3], dflt_value: row[4], pk: row[5] }));
+}
+function setActiveTab(index) {
+  const tabs = document.querySelectorAll('.tab-button');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach((btn, i) => btn.classList.toggle('active', i === index));
+  contents.forEach((div, i) => div.classList.toggle('active', i === index));
+}
+function saveDatabase() {
+  try {
+    const data = db.export();
+    const blob = new Blob([data], { type: 'application/x-sqlite3' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = originalFileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    db.run("PRAGMA foreign_keys = ON");
+    const input = document.getElementById("file-input");
+    const oldLabel = input.nextElementSibling;
+    if (oldLabel && oldLabel.tagName === "SPAN") oldLabel.remove();
+    const label = document.createElement("span");
+    label.textContent = "Arquivo salvo";
+    label.style.color = "red";
+    label.style.marginLeft = "10px";
+    input.insertAdjacentElement("afterend", label);
+  } catch (e) {
+    alert("Erro ao salvar: " + e.message);
+  }
+}
+</script>
 </body>
 </html>
