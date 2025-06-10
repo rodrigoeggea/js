@@ -87,15 +87,13 @@
       display: block;
     }
 
-    .filter h4,
-    form h4 {
+    .filter h4 {
       margin-top: 0;
       font-size: 16px;
       color: #34495e;
     }
 
-    .filter input,
-    form input {
+    .filter input {
       padding: 8px;
       margin: 4px 5px 8px 0;
       border: 1px solid #ccc;
@@ -103,7 +101,25 @@
       font-size: 14px;
     }
 
-    form button {
+    .insert-container {
+      margin-top: 25px;
+    }
+
+    .insert-container h4 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #34495e;
+    }
+
+    .insert-container form input {
+      padding: 8px;
+      margin: 4px 5px 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .insert-container form button {
       background-color: #3498db;
       color: white;
       border: none;
@@ -114,7 +130,7 @@
       margin-top: 8px;
     }
 
-    form button:hover {
+    .insert-container form button:hover {
       background-color: #2980b9;
     }
 
@@ -198,10 +214,15 @@
         const reader = new FileReader();
         reader.onload = function () {
           db = new SQL.Database(new Uint8Array(reader.result));
-          db.run("PRAGMA foreign_keys = ON"); // ✅ importante para reativar FK após salvar
+          db.run("PRAGMA foreign_keys = ON");
           renderTables();
         };
         reader.readAsArrayBuffer(blob);
+
+        const file = new File([blob], "arquivo salvo", { type: "application/x-sqlite3" });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.querySelector("#file-input").files = dataTransfer.files;
 
       } catch (e) {
         alert('Erro ao salvar: ' + e.message);
@@ -246,8 +267,10 @@
         tableContainer.innerHTML = createTableHTML(tableName, columns, values, primaryKeyCol);
         tabContent.appendChild(tableContainer);
 
+        const insertContainer = document.createElement('div');
+        insertContainer.className = 'insert-container';
+        insertContainer.innerHTML = `<h4>Inserir novo registro</h4>`;
         const form = document.createElement('form');
-        form.innerHTML = `<h4>Inserir novo registro</h4>`;
         const insertableColumns = columns.filter(col => !(col.pk && col.type.toUpperCase() === 'INTEGER'));
         insertableColumns.forEach(col => {
           form.innerHTML += `<input name="${col.name}" placeholder="${col.name}" />`;
@@ -277,7 +300,9 @@
             setActiveTab(index);
           } catch (e) { alert('Erro ao inserir: ' + e.message); }
         });
-        tabContent.appendChild(form);
+        insertContainer.appendChild(form);
+        tabContent.appendChild(insertContainer);
+
         document.getElementById('tab-contents').appendChild(tabContent);
       });
 
