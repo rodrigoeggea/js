@@ -139,8 +139,6 @@
       background-color: #f0f0f0;
       font-weight: 600;
       position: relative;
-      resize: horizontal;
-      overflow: auto;
     }
 
     .delete-btn {
@@ -190,20 +188,6 @@
       try {
         const data = db.export();
         const blob = new Blob([data], { type: 'application/x-sqlite3' });
-
-        const newName = prompt("Digite o nome do novo arquivo:", originalFileName);
-        if (!newName) return;
-
-        originalFileName = newName;
-
-        const file = new File([blob], originalFileName, { type: "application/x-sqlite3" });
-
-        // Atualiza o input de arquivo com o novo arquivo
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        const input = document.querySelector("#file-input");
-        input.files = dataTransfer.files;
-
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -214,7 +198,7 @@
         const reader = new FileReader();
         reader.onload = function () {
           db = new SQL.Database(new Uint8Array(reader.result));
-          db.run("PRAGMA foreign_keys = ON");
+          db.run("PRAGMA foreign_keys = ON"); // ✅ importante para reativar FK após salvar
           renderTables();
         };
         reader.readAsArrayBuffer(blob);
@@ -312,7 +296,7 @@
 
     function createTableHTML(tableName, columns, values, primaryKeyCol) {
       let html = '<table><thead><tr>';
-      columns.forEach(col => html += `<th class="resizable">${col.name}</th>`);
+      columns.forEach(col => html += `<th>${col.name}</th>`);
       html += `<th>Ações</th></tr></thead><tbody>`;
       values.forEach(row => {
         html += '<tr>';
