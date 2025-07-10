@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de CNPJ</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 1.1em;
+      margin-bottom: 15px;
+    }
+    button {
+      padding: 12px 25px;
+      font-size: 1em;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    #resultado {
+      margin-top: 25px;
+    }
+    input[readonly] {
+      width: 320px;
+      padding: 10px;
+      font-size: 1.2em;
+      text-align: center;
+      border: 2px solid #3498db;
+      border-radius: 6px;
+      background: #ecf0f1;
+      cursor: pointer;
+      transition: border 0.3s;
+    }
+    input[readonly]:hover {
+      border-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gerador de CNPJ</h1>
+  <label>
+    <input type="checkbox" id="tipoCNPJ"> Gerar CNPJ alfanumérico
+  </label>
+  <button onclick="gerarCNPJ()">Gerar CNPJ</button>
+  <div id="resultado">
+    <input type="text" id="cnpjOutput" readonly onclick="copiarCNPJ()" placeholder="CNPJ gerado aqui">
+  </div>
+
+  <script>
+    function gerarCNPJ() {
+      const alfanumerico = document.getElementById("tipoCNPJ").checked;
+      let cnpjBase = [];
+
+      if (alfanumerico) {
+        for (let i = 0; i < 12; i++) {
+          if (Math.random() < 0.5) {
+            cnpjBase.push(String.fromCharCode(65 + Math.floor(Math.random() * 26)));
+          } else {
+            cnpjBase.push(Math.floor(Math.random() * 10).toString());
+          }
+        }
+      } else {
+        for (let i = 0; i < 12; i++) {
+          cnpjBase.push(Math.floor(Math.random() * 10).toString());
+        }
+      }
+
+      let dv1 = calculaDV(cnpjBase, alfanumerico, [5,4,3,2,9,8,7,6,5,4,3,2]);
+      let dv2 = calculaDV([...cnpjBase, dv1], alfanumerico, [6,5,4,3,2,9,8,7,6,5,4,3,2]);
+
+      let cnpj = cnpjBase.join('') + dv1 + dv2;
+      let cnpjFormatado = cnpj.slice(0,2) + '.' + cnpj.slice(2,5) + '.' + cnpj.slice(5,8) + '/' + cnpj.slice(8,12) + '-' + cnpj.slice(12);
+      document.getElementById("cnpjOutput").value = cnpjFormatado;
+    }
+
+    function calculaDV(cnpjArr, isAlfa, pesos) {
+      let soma = 0;
+      for (let i = 0; i < pesos.length; i++) {
+        let valor;
+        if (isAlfa && isNaN(parseInt(cnpjArr[i]))) {
+          valor = cnpjArr[i].charCodeAt(0) - 48;
+        } else {
+          valor = parseInt(cnpjArr[i]);
+        }
+        soma += valor * pesos[i];
+      }
+      let resto = soma % 11;
+      return resto < 2 ? '0' : (11 - resto).toString();
+    }
+
+    function copiarCNPJ() {
+      const input = document.getElementById("cnpjOutput");
+      input.select();
+      input.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("CNPJ copiado para a área de transferência: " + input.value);
+    }
+  </script>
+</body>
+</html>
