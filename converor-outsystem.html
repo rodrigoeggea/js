@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conversor SQL → OutSystems ({ } e [ ])</title>
+  <style>
+    :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee; --ok:#34d399; --warn:#fbbf24; --err:#f87171 }
+    *{ box-sizing:border-box }
+    body{ margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial; color:var(--text); background:radial-gradient(1200px 900px at 15% 0%, #0b1027, #0f172a) }
+    header{ padding:20px 24px; border-bottom:1px solid #1f2937; background:linear-gradient(180deg,#0b1027, #0f172a)}
+    h1{ margin:0; font-size:18px; letter-spacing:.2px }
+    main{ padding:18px; max-width:1200px; margin:0 auto }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:stretch }
+    .panel{ background:var(--panel); border:1px solid #1f2937; border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.25) }
+    .panel h2{ margin:0 0 8px; font-size:13px; color:var(--muted); font-weight:600; letter-spacing:.3px; text-transform:uppercase }
+    textarea, pre, code, input, select{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    textarea{ width:100%; min-height:320px; resize:vertical; background:#0b1222; color:var(--text); border:1px solid #223047; padding:12px; border-radius:10px }
+    .out{ min-height:320px; white-space:pre; overflow:auto; background:#0b1222; border:1px solid #223047; padding:12px; border-radius:10px }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:10px 0 }
+    label{ display:flex; align-items:center; gap:8px; color:#cbd5e1 }
+    input[type="text"]{ background:#0b1222; border:1px solid #223047; color:var(--text); padding:8px 10px; border-radius:8px; min-width:160px }
+    .btn{ appearance:none; border:none; padding:10px 14px; border-radius:10px; color:#001017; background:var(--accent); font-weight:700; cursor:pointer; box-shadow:0 6px 18px rgba(34,211,238,.2)}
+    .btn.flat{ background:#1f2937; color:#cbd5e1; border:1px solid #334155 }
+    .btn:active{ transform:translateY(1px) }
+    .muted{ color:var(--muted) }
+    .small{ font-size:12px }
+    .kvs{ background:#0b1222; border:1px solid #223047; border-radius:10px; padding:8px; max-height:140px; overflow:auto }
+    .kvs table{ width:100%; border-collapse:collapse }
+    .kvs th, .kvs td{ text-align:left; padding:6px 8px; border-bottom:1px solid #1f2937 }
+    .pill{ display:inline-flex; align-items:center; gap:6px; background:#071022; border:1px solid #223047; border-radius:999px; padding:6px 10px; color:#9cc2ff }
+    .footer{ color:var(--muted); margin-top:14px; font-size:12px }
+    .codebar{ display:flex; gap:8px; justify-content:flex-end; margin-top:8px }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Conversor SQL → OutSystems <span class="muted">({Entity}.[Attribute])</span></h1>
+  <div class="small muted">Heurístico e offline. Preserva strings, comentários e parâmetros; reconhece FROM/JOIN/UPDATE/INTO e mapeia aliases.</div>
+</header>
+<main>
+  <div class="grid">
+    <section class="panel">
+      <h2>Entrada (SQL original)</h2>
+      <textarea id="sqlIn" placeholder="Cole aqui sua SQL...&#10;Ex.:&#10;SELECT p.Nome, e.Cidade FROM PAB_TB_PESSOA p&#10;LEFT JOIN PAB_GEOLOCALIZACAO.TB_ENDERECO e ON e.ID_PESSOA = p.SQ_PESSOA&#10;WHERE p.SQ_SITUACAO NOT IN (19,18,14,5)"></textarea>
+      <div class="row">
+        <label class="pill"><input type="checkbox" id="ruleReplaceDot" checked> Substituir schema.tabela → schema_tabela</label>
+        <label class="pill">Prefixo entidade <input type="text" id="rulePrefix" placeholder="ex.: PAB_"></label>
+        <label class="pill"><input type="checkbox" id="ruleUpper"> ENTIDADES em MAIÚSCULAS</label>
+        <label class="pill"><input type="checkbox" id="ruleAliasPrefer" checked> Preferir alias nas colunas (alias.[Col])</label>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnConvert">Converter</button>
+        <button class="btn flat" id="btnFormat">Formatar básico</button>
+        <button class="btn flat" id="btnCopyOut">Copiar saída</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Saída (SQL para OutSystems)</h2>
+      <div class="out" id="sqlOut"></div>
+      <div class="codebar">
+        <button class="btn flat" id="btnExample">Exemplo</button>
+        <button class="btn flat" id="btnReset">Limpar</button>
+      </div>
+      <div class="footer">Observação: esta ferramenta **não** conhece seus nomes de Entidades OutSystems. Use o prefixo/regra para aproximar (ex.: substituir ponto por sublinhado e prefixar com <code>PAB_</code>). Revise o resultado.
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:16px">
+    <h2>Mapeamento detectado</h2>
+    <div class="kvs">
+      <table id="mapTable"><thead><tr><th>Origem</th><th>Entidade</th><th>Alias</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  const sqlIn = document.getElementById('sqlIn');
+  const sqlOut = document.getElementById('sqlOut');
+  const mapTable = document.getElementById('mapTable').querySelector('tbody');
+  const el = id => document.getElementById(id);
+
+  const KW = new Set('SELECT,FROM,JOIN,LEFT,RIGHT,FULL,OUTER,INNER,CROSS,ON,WHERE,GROUP,ORDER,BY,HAVING,UNION,ALL,DISTINCT,CASE,WHEN,THEN,ELSE,END,AS,AND,OR,NOT,IN,EXISTS,BETWEEN,LIKE,IS,NULL,UPDATE,SET,INSERT,INTO,VALUES,DELETE,TOP,LIMIT,OFFSET,WITH,NOLOCK,OPTION,ESCAPE'.split(','));
+  const isIdentStart = c => /[A-Za-z_]/.test(c);
+  const isIdentChar = c => /[A-Za-z0-9_$]/.test(c);
+
+  function applyEntityRule(raw, opts){
+    let name = raw;
+    if(opts.replaceDot) name = name.replace(/\./g,'_');
+    if(opts.prefix) name = opts.prefix + name;
+    if(opts.upper) name = name.toUpperCase();
+    return name;
+  }
+
+  function tokenize(sql){
+    const toks=[]; let i=0, n=sql.length;
+    let line=1, col=1;
+    const push=(type,val)=>toks.push({type,val,pos:i, line, col});
+    while(i<n){
+      const c=sql[i], c2=sql[i+1];
+      // newline
+      if(c==='\n'){ push('nl','\n'); i++; line++; col=1; continue; }
+      // whitespace
+      if(/\s/.test(c)){ let j=i+1; while(j<n && /\s/.test(sql[j]) && sql[j] !== '\n') j++; push('ws', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // comments -- ...
+      if(c==='-' && c2==='-'){ let j=i+2; while(j<n && sql[j] !== '\n') j++; push('comment', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // comments /* ... */
+      if(c==='/' && c2==='*'){ let j=i+2; while(j<n && !(sql[j]==='*' && sql[j+1]==='/')) j++; j=Math.min(n, j+2); push('comment', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // strings '...'
+      if(c==="'"){ let j=i+1; while(j<n){ if(sql[j]==="'" && sql[j+1]==="'"){ j+=2; continue; } if(sql[j]==="'") { j++; break;} j++; } push('string', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // quoted ident "..."
+      if(c==='"'){ let j=i+1; while(j<n && sql[j]!== '"'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('qident', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // bracketed ident [ ... ] (T-SQL)
+      if(c==='['){ let j=i+1; while(j<n && sql[j]!==']'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('bident', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // backtick ident `...`
+      if(c==='`'){ let j=i+1; while(j<n && sql[j]!== '`'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('tident', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // numbers
+      if(/[0-9]/.test(c)){ let j=i+1; while(j<n && /[0-9a-fx_\.]/i.test(sql[j])) j++; push('num', sql.slice(i,j)); col+=j-i; i=j; continue; }
+      // identifier
+      if(isIdentStart(c)){ let j=i+1; while(j<n && isIdentChar(sql[j])) j++; let w=sql.slice(i,j); const up=w.toUpperCase(); if(KW.has(up)) push('kw', up); else push('ident', w); col+=j-i; i=j; continue; }
+      // punctuation
+      const punct = '.,()=*<>!+-/%|^?:;';
+      if(punct.includes(c)){ push(c,c); i++; col++; continue; }
+      // other
+      push('ch', c); i++; col++; 
+    }
+    return toks;
+  }
+
+  function build(sql, opts){
+    const tokens = tokenize(sql);
+
+    // Pass 1: discover tables and aliases after FROM/INTO/UPDATE/JOIN
+    const aliasToTable = new Map();
+    const tableSet = new Set();
+    const entityName = new Map(); // originalTableToken -> entityName
+
+    function readCompoundIdent(idx){
+      // schema.table or table; includes bracketed or quoted idents
+      const parts=[]; let i=idx; let t=tokens[i];
+      const accept = new Set(['ident','bident','qident','tident']);
+      while(t && accept.has(t.type)){
+        parts.push(t.val.replace(/^[\[`\"]|[\]`\"]$/g,''));
+        if(tokens[i+1] && tokens[i+1].type==='.') { i+=2; t=tokens[i]; continue; }
+        break;
+      }
+      return {name: parts.join('.'), next:i+1};
+    }
+
+    const clauseHeads = new Set(['FROM','JOIN','INTO','UPDATE']);
+    for(let i=0;i<tokens.length;i++){
+      const t=tokens[i];
+      if(t.type==='kw' && clauseHeads.has(t.val)){
+        // Skip possible OUTER/LEFT/RIGHT/FULL preceding JOIN handled by hitting JOIN itself
+        // Next token sequence could be (subquery) or table name
+        // If next is '(', skip – subquery
+        let j=i+1;
+        // Skip whitespace/kw like OUTER
+        while(tokens[j] && (tokens[j].type==='ws' || tokens[j].type==='nl' || (tokens[j].type==='kw' && ['OUTER','LEFT','RIGHT','FULL','INNER','CROSS'].includes(tokens[j].val)))) j++;
+        if(tokens[j] && tokens[j].type==='(') continue; // subquery
+        // read table
+        const {name, next} = readCompoundIdent(j);
+        if(!name) continue;
+        tableSet.add(name);
+        const ent = applyEntityRule(name, opts);
+        entityName.set(name, ent);
+        // try to read optional AS alias or bare alias
+        let k=next; // may be ws, kw AS, ident alias
+        // skip whitespace
+        while(tokens[k] && (tokens[k].type==='ws' || tokens[k].type==='nl')) k++;
+        if(tokens[k] && tokens[k].type==='kw' && tokens[k].val==='AS'){ k++; while(tokens[k] && (tokens[k].type==='ws'||tokens[k].type==='nl')) k++; }
+        if(tokens[k] && (tokens[k].type==='ident' || tokens[k].type==='bident' || tokens[k].type==='qident' || tokens[k].type==='tident')){
+          const alias = tokens[k].val.replace(/^[\[`\"]|[\]`\"]$/g,'');
+          aliasToTable.set(alias, name);
+        }
+      }
+    }
+
+    // Pass 2: reconstruct with replacements
+    const out=[];
+    function isAfterKeyword(i, kw){
+      let j=i-1; while(j>=0 && (tokens[j].type==='ws'||tokens[j].type==='nl')) j--; return tokens[j] && tokens[j].type==='kw' && tokens[j].val===kw;
+    }
+
+    for(let i=0;i<tokens.length;i++){
+      const t=tokens[i];
+      // keep strings/comments as-is
+      if(t.type==='string' || t.type==='comment' || t.type==='qident' || t.type==='bident' || t.type==='tident'){ out.push(t.val); continue; }
+
+      // Replace table token immediately after FROM/JOIN/INTO/UPDATE
+      if(t.type==='ident' && (isAfterKeyword(i,'FROM') || isAfterKeyword(i,'JOIN') || isAfterKeyword(i,'INTO') || isAfterKeyword(i,'UPDATE'))){
+        // Could be schema.table – collect compound
+        const start=i; let end=i; let name=t.val; 
+        if(tokens[i+1] && tokens[i+1].type==='.' && tokens[i+2] && tokens[i+2].type==='ident'){
+          name = t.val + '.' + tokens[i+2].val; end=i+2;
+        }
+        // Emit entity
+        const ent = entityName.get(name) || applyEntityRule(name, opts);
+        out.push('{'+ent+'}');
+        i = end; 
+        continue;
+      }
+
+      // Replace qualified column references: alias.col or table.col, but NOT when followed by '(' (function)
+      if(t.type==='ident' && tokens[i+1] && tokens[i+1].type==='.' && tokens[i+2] && (tokens[i+2].type==='ident' || tokens[i+2].type==='bident')){
+        const left = t.val;
+        const right = tokens[i+2].val.replace(/^[\[]|[\]]$/g,'');
+        const nextTok = tokens[i+3];
+        const looksLikeFunc = nextTok && nextTok.type==='(';
+        if(!looksLikeFunc){
+          if(aliasToTable.has(left)){
+            // alias.[Col]
+            out.push(left + '.[' + right + ']');
+            i += 2; continue;
+          } else if(tableSet.has(left)){
+            const ent = entityName.get(left) || applyEntityRule(left, opts);
+            out.push('{'+ent+'}'+'.['+ right +']');
+            i += 2; continue;
+          }
+        }
+      }
+
+      // default: output as-is (keywords already uppercased in tokenization)
+      out.push(t.val || t.type);
+    }
+
+    return { text: out.join(''), aliasToTable, entityName };
+  }
+
+  function convert(){
+    const opts = {
+      replaceDot: el('ruleReplaceDot').checked,
+      prefix: el('rulePrefix').value || '',
+      upper: el('ruleUpper').checked,
+      preferAlias: el('ruleAliasPrefer').checked
+    };
+    const { text, aliasToTable, entityName } = build(sqlIn.value, opts);
+    sqlOut.textContent = text;
+    // map table
+    mapTable.innerHTML = '';
+    const rows = new Map();
+    // raw tables
+    for(const [raw, ent] of entityName.entries()){
+      rows.set(raw, {raw, ent, alias:''});
+    }
+    // aliases
+    for(const [al, raw] of aliasToTable.entries()){
+      const r = rows.get(raw) || {raw, ent: applyEntityRule(raw, opts), alias:''};
+      r.alias = (r.alias? r.alias + ', ' : '') + al;
+      rows.set(raw, r);
+    }
+    [...rows.values()].forEach(r => {
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td><code>${escapeHtml(r.raw)}</code></td><td><code>{${escapeHtml(r.ent)}}</code></td><td><code>${escapeHtml(r.alias)}</code></td>`;
+      mapTable.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+  }
+
+  function basicFormat(){
+    // very light formatter: line breaks before keywords
+    const s = sqlOut.textContent || sqlIn.value;
+    const formatted = s
+      .replace(/\s+/g,' ')
+      .replace(/\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|HAVING|JOIN|LEFT JOIN|RIGHT JOIN|FULL JOIN|INNER JOIN|OUTER JOIN|ON|UNION ALL|UNION|INSERT INTO|UPDATE|DELETE)\b/gi, '\n$1')
+      .replace(/\s*,\s*/g, ', ')
+      .trim();
+    sqlOut.textContent = formatted;
+  }
+
+  // UI actions
+  document.getElementById('btnConvert').addEventListener('click', convert);
+  document.getElementById('btnCopyOut').addEventListener('click', () => {
+    const s = sqlOut.textContent;
+    if(!s) return;
+    navigator.clipboard.writeText(s);
+  });
+  document.getElementById('btnReset').addEventListener('click', () => {
+    sqlIn.value=''; sqlOut.textContent=''; mapTable.innerHTML='';
+  });
+  document.getElementById('btnExample').addEventListener('click', () => {
+    sqlIn.value = `WITH HTop1 AS (
+  SELECT ac.* FROM TB_ARTESAO_CARTEIRINHA ac
+  WHERE ac.LO_VIGENTE = 1
+)
+SELECT p.SQ_PESSOA, p.TX_NOME, e.ID_PESSOA, cs.TX_NOME AS STATUS
+FROM PAB_TB_PESSOA p
+LEFT JOIN PAB_GEOLOCALIZACAO.TB_ENDERECO e ON e.ID_PESSOA = p.SQ_PESSOA
+JOIN TB_CARTEIRINHA_SITUACAO_PROJETADA csp ON csp.ID_PESSOA = p.SQ_PESSOA
+JOIN TB_SITUACAO cs ON cs.ID_SITUACAO = csp.ID_SITUACAO
+WHERE p.SQ_SITUACAO NOT IN (19,18,14,5)
+ORDER BY csp.CD_CODIGO ASC;`;
+    convert();
+    basicFormat();
+  });
+  document.getElementById('btnFormat').addEventListener('click', basicFormat);
+})();
+</script>
+</body>
+</html>
