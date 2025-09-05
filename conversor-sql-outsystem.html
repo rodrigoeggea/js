@@ -251,8 +251,8 @@
           <div class="footer">
             A <b>Substituição específica</b> tem <u>prioridade</u> sobre a regra
             geral de trocar ponto por sublinhado. Suporta <b>prefixo</b>: por
-            ex., “PAB” → “XXX” converte “PAB.TB_USUARIO” em “XXX.TB_USUARIO” (e
-            com a regra de ponto→sublinhado vira “XXX_TB_USUARIO”).
+            ex., “PAB.” → “PAB_” converte “PAB.TB_USUARIO” em “PAB_TB_USUARIO”
+            (e com a regra de ponto→sublinhado vira “PAB_TB_USUARIO”).
           </div>
         </section>
       </div>
@@ -697,9 +697,14 @@
         document
           .getElementById("btnFormat")
           .addEventListener("click", basicFormat);
+        // Garantir que os campos de substituição iniciem vazios
+        window.addEventListener("load", () => {
+          el("singleFrom").value = "";
+          el("singleTo").value = "";
+        });
         document.getElementById("btnExample").addEventListener("click", () => {
-          el("singleFrom").value = "PAB";
-          el("singleTo").value = "XXX";
+          el("singleFrom").value = "PAB.";
+          el("singleTo").value = "PAB_";
           sqlIn.value = `SELECT u.ID_USUARIO, u.NOME, b.ID_BAIRRO
 FROM PAB.TB_USUARIO u
 LEFT JOIN PAB.GEO.TB_BAIRRO b ON b.ID_USUARIO = u.ID_USUARIO
