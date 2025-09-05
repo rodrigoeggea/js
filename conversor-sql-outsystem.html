@@ -42,7 +42,7 @@
   <div class="grid">
     <section class="panel">
       <h2>Entrada (SQL original)</h2>
-      <textarea id="sqlIn" placeholder="Cole aqui sua SQL...&#10;Ex.:&#10;SELECT p.Nome, e.Cidade FROM PAB_TB_PESSOA p&#10;LEFT JOIN PAB_GEOLOCALIZACAO.TB_ENDERECO e ON e.ID_PESSOA = p.SQ_PESSOA&#10;WHERE p.SQ_SITUACAO NOT IN (19,18,14,5)"></textarea>
+      <textarea id="sqlIn" placeholder="Cole aqui sua SQL...&#10;Ex.:&#10;SELECT c.Nome, p.Descricao FROM TB_CLIENTES c&#10;LEFT JOIN TB_PRODUTOS p ON p.ID_CLIENTE = c.ID_CLIENTE&#10;WHERE p.ATIVO = 1"></textarea>
       <div class="row">
         <label class="pill"><input type="checkbox" id="ruleReplaceDot" checked> Substituir schema.tabela → schema_tabela</label>
         <label class="pill">Prefixo entidade <input type="text" id="rulePrefix" placeholder="ex.: PAB_"></label>
@@ -99,30 +99,18 @@
     const push=(type,val)=>toks.push({type,val,pos:i, line, col});
     while(i<n){
       const c=sql[i], c2=sql[i+1];
-      // newline
       if(c==='\n'){ push('nl','\n'); i++; line++; col=1; continue; }
-      // whitespace
       if(/\s/.test(c)){ let j=i+1; while(j<n && /\s/.test(sql[j]) && sql[j] !== '\n') j++; push('ws', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // comments -- ...
       if(c==='-' && c2==='-'){ let j=i+2; while(j<n && sql[j] !== '\n') j++; push('comment', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // comments /* ... */
       if(c==='/' && c2==='*'){ let j=i+2; while(j<n && !(sql[j]==='*' && sql[j+1]==='/')) j++; j=Math.min(n, j+2); push('comment', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // strings '...'
       if(c==="'"){ let j=i+1; while(j<n){ if(sql[j]==="'" && sql[j+1]==="'"){ j+=2; continue; } if(sql[j]==="'") { j++; break;} j++; } push('string', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // quoted ident "..."
       if(c==='"'){ let j=i+1; while(j<n && sql[j]!== '"'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('qident', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // bracketed ident [ ... ] (T-SQL)
       if(c==='['){ let j=i+1; while(j<n && sql[j]!==']'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('bident', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // backtick ident `...`
       if(c==='`'){ let j=i+1; while(j<n && sql[j]!== '`'){ if(sql[j]==='\\') j++; j++; } j=Math.min(n,j+1); push('tident', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // numbers
       if(/[0-9]/.test(c)){ let j=i+1; while(j<n && /[0-9a-fx_\.]/i.test(sql[j])) j++; push('num', sql.slice(i,j)); col+=j-i; i=j; continue; }
-      // identifier
       if(isIdentStart(c)){ let j=i+1; while(j<n && isIdentChar(sql[j])) j++; let w=sql.slice(i,j); const up=w.toUpperCase(); if(KW.has(up)) push('kw', up); else push('ident', w); col+=j-i; i=j; continue; }
-      // punctuation
       const punct = '.,()=*<>!+-/%|^?:;';
       if(punct.includes(c)){ push(c,c); i++; col++; continue; }
-      // other
       push('ch', c); i++; col++; 
     }
     return toks;
@@ -131,13 +119,11 @@
   function build(sql, opts){
     const tokens = tokenize(sql);
 
-    // Pass 1: discover tables and aliases after FROM/INTO/UPDATE/JOIN
     const aliasToTable = new Map();
     const tableSet = new Set();
-    const entityName = new Map(); // originalTableToken -> entityName
+    const entityName = new Map();
 
     function readCompoundIdent(idx){
-      // schema.table or table; includes bracketed or quoted idents
       const parts=[]; let i=idx; let t=tokens[i];
       const accept = new Set(['ident','bident','qident','tident']);
       while(t && accept.has(t.type)){
@@ -152,22 +138,15 @@
     for(let i=0;i<tokens.length;i++){
       const t=tokens[i];
       if(t.type==='kw' && clauseHeads.has(t.val)){
-        // Skip possible OUTER/LEFT/RIGHT/FULL preceding JOIN handled by hitting JOIN itself
-        // Next token sequence could be (subquery) or table name
-        // If next is '(', skip – subquery
         let j=i+1;
-        // Skip whitespace/kw like OUTER
         while(tokens[j] && (tokens[j].type==='ws' || tokens[j].type==='nl' || (tokens[j].type==='kw' && ['OUTER','LEFT','RIGHT','FULL','INNER','CROSS'].includes(tokens[j].val)))) j++;
-        if(tokens[j] && tokens[j].type==='(') continue; // subquery
-        // read table
+        if(tokens[j] && tokens[j].type==='(') continue;
         const {name, next} = readCompoundIdent(j);
         if(!name) continue;
         tableSet.add(name);
         const ent = applyEntityRule(name, opts);
         entityName.set(name, ent);
-        // try to read optional AS alias or bare alias
-        let k=next; // may be ws, kw AS, ident alias
-        // skip whitespace
+        let k=next;
         while(tokens[k] && (tokens[k].type==='ws' || tokens[k].type==='nl')) k++;
         if(tokens[k] && tokens[k].type==='kw' && tokens[k].val==='AS'){ k++; while(tokens[k] && (tokens[k].type==='ws'||tokens[k].type==='nl')) k++; }
         if(tokens[k] && (tokens[k].type==='ident' || tokens[k].type==='bident' || tokens[k].type==='qident' || tokens[k].type==='tident')){
@@ -177,7 +156,6 @@
       }
     }
 
-    // Pass 2: reconstruct with replacements
     const out=[];
     function isAfterKeyword(i, kw){
       let j=i-1; while(j>=0 && (tokens[j].type==='ws'||tokens[j].type==='nl')) j--; return tokens[j] && tokens[j].type==='kw' && tokens[j].val===kw;
@@ -185,24 +163,19 @@
 
     for(let i=0;i<tokens.length;i++){
       const t=tokens[i];
-      // keep strings/comments as-is
       if(t.type==='string' || t.type==='comment' || t.type==='qident' || t.type==='bident' || t.type==='tident'){ out.push(t.val); continue; }
 
-      // Replace table token immediately after FROM/JOIN/INTO/UPDATE
       if(t.type==='ident' && (isAfterKeyword(i,'FROM') || isAfterKeyword(i,'JOIN') || isAfterKeyword(i,'INTO') || isAfterKeyword(i,'UPDATE'))){
-        // Could be schema.table – collect compound
         const start=i; let end=i; let name=t.val; 
         if(tokens[i+1] && tokens[i+1].type==='.' && tokens[i+2] && tokens[i+2].type==='ident'){
           name = t.val + '.' + tokens[i+2].val; end=i+2;
         }
-        // Emit entity
         const ent = entityName.get(name) || applyEntityRule(name, opts);
         out.push('{'+ent+'}');
         i = end; 
         continue;
       }
 
-      // Replace qualified column references: alias.col or table.col, but NOT when followed by '(' (function)
       if(t.type==='ident' && tokens[i+1] && tokens[i+1].type==='.' && tokens[i+2] && (tokens[i+2].type==='ident' || tokens[i+2].type==='bident')){
         const left = t.val;
         const right = tokens[i+2].val.replace(/^[\[]|[\]]$/g,'');
@@ -210,7 +183,6 @@
         const looksLikeFunc = nextTok && nextTok.type==='(';
         if(!looksLikeFunc){
           if(aliasToTable.has(left)){
-            // alias.[Col]
             out.push(left + '.[' + right + ']');
             i += 2; continue;
           } else if(tableSet.has(left)){
@@ -221,7 +193,6 @@
         }
       }
 
-      // default: output as-is (keywords already uppercased in tokenization)
       out.push(t.val || t.type);
     }
 
@@ -237,14 +208,11 @@
     };
     const { text, aliasToTable, entityName } = build(sqlIn.value, opts);
     sqlOut.textContent = text;
-    // map table
     mapTable.innerHTML = '';
     const rows = new Map();
-    // raw tables
     for(const [raw, ent] of entityName.entries()){
       rows.set(raw, {raw, ent, alias:''});
     }
-    // aliases
     for(const [al, raw] of aliasToTable.entries()){
       const r = rows.get(raw) || {raw, ent: applyEntityRule(raw, opts), alias:''};
       r.alias = (r.alias? r.alias + ', ' : '') + al;
@@ -262,7 +230,6 @@
   }
 
   function basicFormat(){
-    // very light formatter: line breaks before keywords
     const s = sqlOut.textContent || sqlIn.value;
     const formatted = s
       .replace(/\s+/g,' ')
@@ -272,7 +239,6 @@
     sqlOut.textContent = formatted;
   }
 
-  // UI actions
   document.getElementById('btnConvert').addEventListener('click', convert);
   document.getElementById('btnCopyOut').addEventListener('click', () => {
     const s = sqlOut.textContent;
@@ -283,17 +249,11 @@
     sqlIn.value=''; sqlOut.textContent=''; mapTable.innerHTML='';
   });
   document.getElementById('btnExample').addEventListener('click', () => {
-    sqlIn.value = `WITH HTop1 AS (
-  SELECT ac.* FROM TB_ARTESAO_CARTEIRINHA ac
-  WHERE ac.LO_VIGENTE = 1
-)
-SELECT p.SQ_PESSOA, p.TX_NOME, e.ID_PESSOA, cs.TX_NOME AS STATUS
-FROM PAB_TB_PESSOA p
-LEFT JOIN PAB_GEOLOCALIZACAO.TB_ENDERECO e ON e.ID_PESSOA = p.SQ_PESSOA
-JOIN TB_CARTEIRINHA_SITUACAO_PROJETADA csp ON csp.ID_PESSOA = p.SQ_PESSOA
-JOIN TB_SITUACAO cs ON cs.ID_SITUACAO = csp.ID_SITUACAO
-WHERE p.SQ_SITUACAO NOT IN (19,18,14,5)
-ORDER BY csp.CD_CODIGO ASC;`;
+    sqlIn.value = `SELECT c.ID_CLIENTE, c.NOME, p.ID_PRODUTO, p.DESCRICAO
+FROM TB_CLIENTES c
+LEFT JOIN TB_PRODUTOS p ON p.ID_CLIENTE = c.ID_CLIENTE
+WHERE p.ATIVO = 1
+ORDER BY c.NOME ASC;`;
     convert();
     basicFormat();
   });
